@@ -21,9 +21,7 @@ import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
-import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.MappingJsonFactory;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -38,14 +36,7 @@ public class JsonDocument
 {
     private static final int DEFAULT_SIZE = 4096;
 
-    protected static final ObjectMapper mapper = new ObjectMapper();
-
-    protected static final JsonFactory factory;
-
-    static {
-        mapper.enable(DeserializationConfig.Feature.USE_BIG_DECIMAL_FOR_FLOATS);
-        factory = new MappingJsonFactory(mapper);
-    }
+    protected static final JsonFactory factory = new MappingJsonFactory(null);
 
     protected final Map<String, Long> fields
         = new LinkedHashMap<String, Long>();
@@ -80,19 +71,44 @@ public class JsonDocument
         try {
             final JsonParser parser = factory.createJsonParser(in);
 
-            if (parser.nextToken() != JsonToken.START_OBJECT)
+            JsonToken token = parser.nextToken();
+
+            if (token != JsonToken.START_OBJECT)
                 throw new IOException("not an object");
 
-            while (parser.nextToken() != JsonToken.END_OBJECT) {
-                offset = parser.getCurrentLocation().getCharOffset();
-                final String text = parser.getText();
-                fields.put(text, offset);
-                parser.nextToken();
-                parser.skipChildren();
+            parser.nextToken();
+
+            while ((token = parser.getCurrentToken()) != JsonToken.END_OBJECT) {
+                switch (token) {
+                    case FIELD_NAME:
+                        final String text = parser.getText();
+                        parser.nextValue();
+                        offset = calculateOffset(text, parser);
+                        fields.put(text, offset);
+                        break;
+                    case START_OBJECT: case START_ARRAY:
+                        parser.skipChildren();
+                        /* fall through */
+                    default:
+                        parser.nextToken();
+                }
             }
         } finally {
             in.close();
         }
+    }
+
+    private long calculateOffset(final String s, final JsonParser parser)
+    {
+        int ret = (int) parser.getTokenLocation().getCharOffset() + s.length()
+            + 2;
+
+        final byte[] b = buf.array();
+
+        while (b[ret++] != ':')
+            ; /* nothing */
+
+        return ret;
     }
 
     public static JsonDocument fromInputStream(final InputStream in)
@@ -186,20 +202,21 @@ public class JsonDocument
 
         int size = buf.capacity() - beginOffset - 1;
 
+        final byte[] array = buf.array();
         if (iterator.hasNext()) {
             /*
             * Ugly :/ But I haven't found a way for Jackson to tell me the
             * location of the comma
             */
             int commaOffset = fields.get(iterator.next()).intValue();
-            while ((char) buf.array()[commaOffset--] != ',')
-                ; /* Nothing */
+            while ((char) array[commaOffset] != ',')
+                commaOffset--;
             size = commaOffset - beginOffset + 1;
         }
 
         final ByteBuffer ret = ByteBuffer.allocate(size);
 
-        ret.put(buf.array(), beginOffset, size);
+        ret.put(array, beginOffset, size);
         return ret;
     }
 
@@ -211,7 +228,9 @@ public class JsonDocument
         if (ret != null)
             return ret;
 
-        ret = getParser(field).getNumberValue();
+        final JsonParser parser = getParser(field);
+        ret = parser.getCurrentToken() == JsonToken.VALUE_NUMBER_FLOAT
+            ? parser.getDecimalValue() : parser.getNumberValue();
 
         numberValues.put(field, ret);
 

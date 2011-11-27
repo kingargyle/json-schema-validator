@@ -22,6 +22,7 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 
 import static org.testng.Assert.*;
 
@@ -38,5 +39,49 @@ public final class JsonDocumentTest
         } catch (IOException e) {
             assertEquals(e.getMessage(), "not an object");
         }
+    }
+
+    @Test
+    public void testGetString()
+        throws IOException
+    {
+        final String input = "{\"hello\":\"world\",\"a\":5,\"b\":\"c\"}";
+
+        final InputStream in = new ByteArrayInputStream(input.getBytes());
+
+        final JsonDocument document = JsonDocument.fromInputStream(in);
+
+        assertEquals(document.getString("hello"), "world");
+        assertEquals(document.getString("b"), "c");
+
+        try {
+            document.getString("a");
+            fail("No exception thrown");
+        } catch (IOException e) {
+            assertEquals(e.getMessage(), "a is not a string");
+        }
+    }
+
+    @Test
+    public void testGetNumber()
+        throws IOException
+    {
+        final String input = "{  \"a\"  :  1,\"b\":   99018230980918,"
+            + "    \"c\"  :    0.1     }";
+
+        final InputStream in = new ByteArrayInputStream(input.getBytes());
+
+        final JsonDocument document = JsonDocument.fromInputStream(in);
+
+        Number n;
+
+        n = document.getNumber("a");
+        assertEquals(Integer.class, n.getClass());
+
+        n = document.getNumber("b");
+        assertEquals(Long.class, n.getClass());
+
+        n = document.getNumber("c");
+        assertEquals(BigDecimal.class, n.getClass());
     }
 }
