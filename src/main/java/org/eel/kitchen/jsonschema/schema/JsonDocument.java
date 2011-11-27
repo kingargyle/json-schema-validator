@@ -21,7 +21,9 @@ import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
+import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.MappingJsonFactory;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -35,7 +37,11 @@ public class JsonDocument
 {
     private static final int DEFAULT_SIZE = 4096;
 
-    protected static final JsonFactory factory = new MappingJsonFactory(null);
+    protected static final ObjectMapper mapper = new ObjectMapper()
+        .enable(DeserializationConfig.Feature.USE_BIG_DECIMAL_FOR_FLOATS);
+
+    protected static final JsonFactory factory
+        = new MappingJsonFactory(mapper);
 
     protected final Map<String, Long> fields
         = new LinkedHashMap<String, Long>();
