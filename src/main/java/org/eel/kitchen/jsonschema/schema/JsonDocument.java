@@ -100,6 +100,10 @@ public class JsonDocument
 
     private long calculateOffset(final String s, final JsonParser parser)
     {
+        /*
+         * I hate to have to do that, but I have no choice: Jackson doesn't
+         * provide a way to point to the beginning of a value!!
+         */
         int ret = (int) parser.getTokenLocation().getCharOffset() + s.length()
             + 2;
 
@@ -200,9 +204,11 @@ public class JsonDocument
                 break;
         }
 
+        final byte[] array = buf.array();
+
+        /* FIXME: won't work if last char isn't a '}' */
         int size = buf.capacity() - beginOffset - 1;
 
-        final byte[] array = buf.array();
         if (iterator.hasNext()) {
             /*
             * Ugly :/ But I haven't found a way for Jackson to tell me the
