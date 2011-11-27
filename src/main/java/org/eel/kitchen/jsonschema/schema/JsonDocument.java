@@ -162,12 +162,10 @@ public class JsonDocument
 
         final InputStream ret = new ByteArrayInputStream(buf.array());
 
-        final Long expected = fields.get(field);
-        final long offset = ret.skip(expected);
+        final Long offset = fields.get(field);
 
-        if (offset != expected)
-            throw new IOException("cannot seek " + expected + " bytes into "
-                + "stream (got result " + offset + ")");
+        if (offset != ret.skip(offset))
+            throw new IOException("cannot seek " + offset + " bytes in stream");
 
         final JsonParser parser = factory.createJsonParser(ret);
         parser.nextToken();
@@ -194,21 +192,11 @@ public class JsonDocument
     public final ByteBuffer getBuf(final String field)
         throws IOException
     {
-        if (!fields.containsKey(field))
-            throw new IOException("no such field " + field);
+        final JsonParser parser = getParser(field);
 
         long beginOffset = fields.get(field);
 
         final byte[] array = buf.array();
-
-        final InputStream in = new ByteArrayInputStream(array);
-
-        if (beginOffset != in.skip(beginOffset))
-            throw new IOException("cannot seek " + beginOffset + " in stream");
-
-        final JsonParser parser = factory.createJsonParser(in);
-
-        parser.nextToken();
 
         beginOffset += parser.getTokenLocation().getCharOffset();
 
