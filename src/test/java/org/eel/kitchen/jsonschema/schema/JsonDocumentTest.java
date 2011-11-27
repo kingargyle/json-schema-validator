@@ -84,4 +84,28 @@ public final class JsonDocumentTest
         n = document.getNumber("c");
         assertEquals(BigDecimal.class, n.getClass());
     }
+
+    @Test
+    public void testGetBuf()
+        throws IOException
+    {
+        final String input = "   { \"object\" : {\"a\":2},"
+            + " \"array\" : [2,null,false,{}],"
+            + " \"scalar\" : null    }   ";
+
+        final InputStream in = new ByteArrayInputStream(input.getBytes());
+
+        final JsonDocument document = JsonDocument.fromInputStream(in);
+
+        String s;
+
+        s = new String(document.getBuf("object").array());
+        assertEquals(s, "{\"a\":2}");
+
+        s = new String(document.getBuf("array").array());
+        assertEquals(s, "[2,null,false,{}]");
+
+        s = new String(document.getBuf("scalar").array());
+        assertEquals(s, "null");
+    }
 }

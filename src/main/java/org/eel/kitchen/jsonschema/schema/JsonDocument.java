@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -192,37 +191,29 @@ public class JsonDocument
         if (!fields.containsKey(field))
             throw new IOException("no such field " + field);
 
-        final int beginOffset = fields.get(field).intValue();
-
-        final Iterator<String> iterator = fields.keySet().iterator();
-
-        String s;
-
-        while (iterator.hasNext()) {
-            s = iterator.next();
-            if (s.equals(field))
-                break;
-        }
+        long beginOffset = fields.get(field);
 
         final byte[] array = buf.array();
 
-        /* FIXME: won't work if last char isn't a '}' */
-        int size = buf.capacity() - beginOffset - 1;
+        final InputStream in = new ByteArrayInputStream(array);
 
-        if (iterator.hasNext()) {
-            /*
-            * Ugly :/ But I haven't found a way for Jackson to tell me the
-            * location of the comma
-            */
-            int commaOffset = fields.get(iterator.next()).intValue();
-            while ((char) array[commaOffset] != ',')
-                commaOffset--;
-            size = commaOffset - beginOffset + 1;
-        }
+        if (beginOffset != in.skip(beginOffset))
+            throw new IOException("cannot seek " + beginOffset + " in stream");
+
+        final JsonParser parser = factory.createJsonParser(in);
+
+        parser.nextToken();
+
+        beginOffset += parser.getTokenLocation().getCharOffset();
+
+        if (!parser.getCurrentToken().isScalarValue())
+            parser.skipChildren();
+
+        final int size = (int) parser.getCurrentLocation().getCharOffset();
 
         final ByteBuffer ret = ByteBuffer.allocate(size);
 
-        ret.put(array, beginOffset, size);
+        ret.put(array, (int) beginOffset, size);
         return ret;
     }
 
