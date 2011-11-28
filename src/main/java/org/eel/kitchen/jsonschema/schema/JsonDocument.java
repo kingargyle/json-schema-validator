@@ -18,6 +18,7 @@
 package org.eel.kitchen.jsonschema.schema;
 
 import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonLocation;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
@@ -202,12 +203,15 @@ public class JsonDocument
                 return ret;
             }
 
-            final long offset = parser.getTokenLocation().getCharOffset();
+            JsonLocation location;
+
+            location = parser.getTokenLocation();
+            final long offset = location.getCharOffset();
 
             parser.skipChildren();
 
-            final int size = (int) (parser.getCurrentLocation().getCharOffset()
-                - offset + 1);
+            location = parser.getCurrentLocation();
+            final int size = (int) (location.getCharOffset() - offset + 1);
 
             ret = ByteBuffer.allocate(size);
 
