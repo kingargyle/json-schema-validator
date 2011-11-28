@@ -60,6 +60,32 @@ public class JsonDocument
 
     private final ByteBuffer buf;
 
+    public static JsonDocument fromInputStream(final InputStream in)
+        throws IOException
+    {
+        ByteBuffer buf = ByteBuffer.allocate(DEFAULT_SIZE);
+
+        final byte[] tmp = new byte[DEFAULT_SIZE];
+
+        int read, size = 0;
+
+        try {
+            while ((read = in.read(tmp)) != -1) {
+                size += read;
+                if (size > buf.capacity())
+                    buf = renew(buf);
+                buf.put(tmp, 0, read);
+            }
+        } finally {
+            in.close();
+        }
+
+        final ByteBuffer ret = ByteBuffer.allocate(size);
+        ret.put(buf.array(), 0, size);
+        ret.position(0);
+        return new JsonDocument(ret);
+    }
+
     protected JsonDocument(final ByteBuffer buf)
         throws IOException
     {
@@ -118,31 +144,6 @@ public class JsonDocument
             ; /* nothing */
 
         return ret;
-    }
-
-    public static JsonDocument fromInputStream(final InputStream in)
-        throws IOException
-    {
-        ByteBuffer buf = ByteBuffer.allocate(DEFAULT_SIZE);
-
-        final byte[] tmp = new byte[DEFAULT_SIZE];
-
-        int read, size = 0;
-
-        try {
-            while ((read = in.read(tmp)) != -1) {
-                size += read;
-                if (size > buf.capacity())
-                    buf = renew(buf);
-                buf.put(tmp, 0, read);
-            }
-        } finally {
-            in.close();
-        }
-
-        final ByteBuffer ret = ByteBuffer.allocate(size);
-        ret.put(buf.array(), 0, size);
-        return new JsonDocument(ret);
     }
 
     private static ByteBuffer renew(final ByteBuffer buf)
