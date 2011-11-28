@@ -153,8 +153,10 @@ public class JsonDocument
 
         final Long offset = fields.get(field);
 
-        if (offset != ret.skip(offset))
+        if (offset != ret.skip(offset)) {
+            ret.close();
             throw new IOException("cannot seek " + offset + " bytes in stream");
+        }
 
         final JsonParser parser = factory.createJsonParser(ret);
         parser.nextToken();
@@ -172,8 +174,12 @@ public class JsonDocument
 
         final JsonParser parser = getParser(field);
 
-        ret = parser.readValueAsTree();
-        rawValues.put(field, ret);
+        try {
+            ret = parser.readValueAsTree();
+            rawValues.put(field, ret);
+        } finally {
+            parser.close();
+        }
 
         return ret;
     }
@@ -186,26 +192,30 @@ public class JsonDocument
         final JsonParser parser = getParser(field);
         final JsonToken token = parser.getCurrentToken();
 
-        if (token.isScalarValue()) {
-            String s = parser.getText();
-            if (token == JsonToken.VALUE_STRING)
-                s = '"' + s + '"';
-            ret = ByteBuffer.allocate(s.length());
-            ret.put(s.getBytes());
+        try {
+            if (token.isScalarValue()) {
+                String s = parser.getText();
+                if (token == JsonToken.VALUE_STRING)
+                    s = '"' + s + '"';
+                ret = ByteBuffer.allocate(s.length());
+                ret.put(s.getBytes());
+                return ret;
+            }
+
+            final long offset = parser.getTokenLocation().getCharOffset();
+
+            parser.skipChildren();
+
+            final int size = (int) (parser.getCurrentLocation().getCharOffset()
+                - offset + 1);
+
+            ret = ByteBuffer.allocate(size);
+
+            ret.put(buf.array(), (int) (fields.get(field) + offset), size);
             return ret;
+        } finally {
+            parser.close();
         }
-
-        final long offset = parser.getTokenLocation().getCharOffset();
-
-        parser.skipChildren();
-
-        final int size = (int) (parser.getCurrentLocation().getCharOffset()
-            - offset + 1);
-
-        ret = ByteBuffer.allocate(size);
-
-        ret.put(buf.array(), (int) (fields.get(field) + offset), size);
-        return ret;
     }
 
     public final Number getNumber(final String field)
@@ -217,12 +227,21 @@ public class JsonDocument
             return ret;
 
         final JsonParser parser = getParser(field);
-        ret = parser.getCurrentToken() == JsonToken.VALUE_NUMBER_FLOAT
-            ? parser.getDecimalValue() : parser.getNumberValue();
 
-        numberValues.put(field, ret);
+        try {
+            final JsonToken token = parser.getCurrentToken();
 
-        return ret;
+            if (!token.isNumeric())
+                throw new IOException(field + " is not a number");
+
+            ret = token == JsonToken.VALUE_NUMBER_FLOAT
+                ? parser.getDecimalValue() : parser.getNumberValue();
+
+            numberValues.put(field, ret);
+            return ret;
+        } finally {
+            parser.close();
+        }
     }
 
     public final String getString(final String field)
@@ -235,13 +254,17 @@ public class JsonDocument
 
         final JsonParser parser = getParser(field);
 
-        if (parser.getCurrentToken() != JsonToken.VALUE_STRING)
-            throw new IOException(field + " is not a string");
+        try {
+            if (parser.getCurrentToken() != JsonToken.VALUE_STRING)
+                throw new IOException(field + " is not a string");
 
-        ret = parser.getText();
-        stringValues.put(field, ret);
+            ret = parser.getText();
+            stringValues.put(field, ret);
 
-        return ret;
+            return ret;
+        } finally {
+            parser.close();
+        }
     }
 
     public final boolean getBoolean(final String field)
@@ -254,13 +277,17 @@ public class JsonDocument
 
         final JsonParser parser = getParser(field);
 
-        switch (parser.getCurrentToken()) {
-            case VALUE_TRUE: case VALUE_FALSE:
-                ret = parser.getBooleanValue();
-                booleanValues.put(field, ret);
-                return ret;
-            default:
-                throw new IOException(field + " is not a boolean");
+        try {
+            switch (parser.getCurrentToken()) {
+                case VALUE_TRUE: case VALUE_FALSE:
+                    ret = parser.getBooleanValue();
+                    booleanValues.put(field, ret);
+                    return ret;
+                default:
+                    throw new IOException(field + " is not a boolean");
+            }
+        } finally {
+            parser.close();
         }
     }
 
