@@ -102,27 +102,15 @@ public class JsonDocument
         try {
             final JsonParser parser = factory.createJsonParser(in);
 
-            JsonToken token = parser.nextToken();
-
-            if (token != JsonToken.START_OBJECT)
+            if (parser.nextToken() != JsonToken.START_OBJECT)
                 throw new IOException("not an object");
 
-            parser.nextToken();
-
-            while ((token = parser.getCurrentToken()) != JsonToken.END_OBJECT) {
-                switch (token) {
-                    case FIELD_NAME:
-                        final String text = parser.getText();
-                        parser.nextValue();
-                        offset = calculateOffset(text, parser);
-                        fields.put(text, offset);
-                        break;
-                    case START_OBJECT: case START_ARRAY:
-                        parser.skipChildren();
-                        /* fall through */
-                    default:
-                        parser.nextToken();
-                }
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                final String text = parser.getText();
+                parser.nextValue();
+                offset = calculateOffset(text, parser);
+                fields.put(text, offset);
+                parser.skipChildren();
             }
         } finally {
             in.close();
