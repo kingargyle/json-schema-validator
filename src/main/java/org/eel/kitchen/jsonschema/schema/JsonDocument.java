@@ -192,22 +192,30 @@ public class JsonDocument
     public final ByteBuffer getBuf(final String field)
         throws IOException
     {
+        final ByteBuffer ret;
+
         final JsonParser parser = getParser(field);
+        final JsonToken token = parser.getCurrentToken();
 
-        long beginOffset = fields.get(field);
+        if (token.isScalarValue()) {
+            String s = parser.getText();
+            if (token == JsonToken.VALUE_STRING)
+                s = '"' + s + '"';
+            ret = ByteBuffer.allocate(s.length());
+            ret.put(s.getBytes());
+            return ret;
+        }
 
-        final byte[] array = buf.array();
+        final long offset = parser.getTokenLocation().getCharOffset();
 
-        beginOffset += parser.getTokenLocation().getCharOffset();
+        parser.skipChildren();
 
-        if (!parser.getCurrentToken().isScalarValue())
-            parser.skipChildren();
+        final int size = (int) (parser.getCurrentLocation().getCharOffset()
+            - offset + 1);
 
-        final int size = (int) parser.getCurrentLocation().getCharOffset();
+        ret = ByteBuffer.allocate(size);
 
-        final ByteBuffer ret = ByteBuffer.allocate(size);
-
-        ret.put(array, (int) beginOffset, size);
+        ret.put(buf.array(), (int) (fields.get(field) + offset), size);
         return ret;
     }
 

@@ -89,9 +89,10 @@ public final class JsonDocumentTest
     public void testGetBuf()
         throws IOException
     {
-        final String input = "   { \"object\" : {\"a\":2},"
-            + " \"array\" : [2,null,false,{}],"
-            + " \"scalar\" : null    }   ";
+        final String input = "   { \"object\" :     {\"a\":2},"
+            + " \"array\":[2,null,false,{}]      ,"
+            + " \"scalar\" : null    , \"boolean\":true,"
+            + " \"integer\": 232, \"string\":\"pwet\" }   ";
 
         final InputStream in = new ByteArrayInputStream(input.getBytes());
 
@@ -107,5 +108,14 @@ public final class JsonDocumentTest
 
         s = new String(document.getBuf("scalar").array());
         assertEquals(s, "null");
+
+        s = new String(document.getBuf("boolean").array());
+        assertEquals(s, "true");
+
+        s = new String(document.getBuf("integer").array());
+        assertEquals(s, "232");
+
+        s = new String(document.getBuf("string").array());
+        assertEquals(s, "\"pwet\"");
     }
 }
