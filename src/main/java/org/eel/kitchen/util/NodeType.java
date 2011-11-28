@@ -121,7 +121,11 @@ public enum NodeType
      */
     public static NodeType getNodeType(final JsonNode node)
     {
-        final JsonToken token = node.asToken();
+        return fromToken(node.asToken());
+    }
+
+    public static NodeType fromToken(final JsonToken token)
+    {
         final NodeType ret = reverseMap.get(token);
 
         if (ret == null)
