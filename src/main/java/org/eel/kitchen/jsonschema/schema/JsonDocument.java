@@ -25,6 +25,7 @@ import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.eel.kitchen.util.NodeType;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -44,8 +45,8 @@ public class JsonDocument
     protected static final JsonFactory factory
         = new MappingJsonFactory(mapper);
 
-    protected final Map<String, Long> fields
-        = new LinkedHashMap<String, Long>();
+    protected final Map<String, KeywordInfo> fields
+        = new LinkedHashMap<String, KeywordInfo>();
 
     protected final Map<String, JsonNode> rawValues
         = new HashMap<String, JsonNode>();
@@ -98,6 +99,8 @@ public class JsonDocument
         throws IOException
     {
         long offset;
+        KeywordInfo info;
+
         final InputStream in = new ByteArrayInputStream(buf.array());
 
         try {
@@ -109,8 +112,11 @@ public class JsonDocument
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 final String text = parser.getText();
                 parser.nextValue();
+                info = new KeywordInfo();
                 offset = calculateOffset(text, parser);
-                fields.put(text, offset);
+                info.setOffset(offset);
+                info.setType(NodeType.fromToken(parser.getCurrentToken()));
+                fields.put(text, info);
                 parser.skipChildren();
             }
         } finally {
@@ -144,15 +150,23 @@ public class JsonDocument
         return ret;
     }
 
+    protected final KeywordInfo getInfo(final String field)
+        throws IOException
+    {
+        final KeywordInfo ret = fields.get(field);
+
+        if (ret == null)
+            throw new IOException("no such field " + field);
+
+        return ret;
+    }
+
     protected final JsonParser getParser(final String field)
         throws IOException
     {
-        if (!fields.containsKey(field))
-            throw new IOException("no such field " + field);
-
         final InputStream ret = new ByteArrayInputStream(buf.array());
 
-        final Long offset = fields.get(field);
+        final Long offset = fields.get(field).getOffset();
 
         if (offset != ret.skip(offset)) {
             ret.close();
@@ -215,7 +229,8 @@ public class JsonDocument
 
             ret = ByteBuffer.allocate(size);
 
-            ret.put(buf.array(), (int) (fields.get(field) + offset), size);
+            final int start = (int) (fields.get(field).getOffset() + offset);
+            ret.put(buf.array(), start, size);
             return ret;
         } finally {
             parser.close();
@@ -230,17 +245,17 @@ public class JsonDocument
         if (ret != null)
             return ret;
 
+        final KeywordInfo info = fields.get(field);
+        final NodeType type = info.getType();
+
+        if (type != NodeType.INTEGER && type != NodeType.NUMBER)
+            throw new IOException(field + " is not a number");
+
         final JsonParser parser = getParser(field);
 
         try {
-            final JsonToken token = parser.getCurrentToken();
-
-            if (!token.isNumeric())
-                throw new IOException(field + " is not a number");
-
-            ret = token == JsonToken.VALUE_NUMBER_FLOAT
-                ? parser.getDecimalValue() : parser.getNumberValue();
-
+            ret = type == NodeType.INTEGER ? parser.getNumberValue()
+                : parser.getDecimalValue();
             numberValues.put(field, ret);
             return ret;
         } finally {
@@ -256,15 +271,16 @@ public class JsonDocument
         if (ret != null)
             return ret;
 
+        final NodeType type = fields.get(field).getType();
+
+        if (type != NodeType.STRING)
+            throw new IOException(field + " is not a string");
+
         final JsonParser parser = getParser(field);
 
         try {
-            if (parser.getCurrentToken() != JsonToken.VALUE_STRING)
-                throw new IOException(field + " is not a string");
-
             ret = parser.getText();
             stringValues.put(field, ret);
-
             return ret;
         } finally {
             parser.close();
@@ -279,17 +295,17 @@ public class JsonDocument
         if (ret != null)
             return ret;
 
+        final NodeType type = fields.get(field).getType();
+
+        if (type != NodeType.BOOLEAN)
+            throw new IOException(field + " is not a boolean");
+
         final JsonParser parser = getParser(field);
 
         try {
-            switch (parser.getCurrentToken()) {
-                case VALUE_TRUE: case VALUE_FALSE:
-                    ret = parser.getBooleanValue();
-                    booleanValues.put(field, ret);
-                    return ret;
-                default:
-                    throw new IOException(field + " is not a boolean");
-            }
+            ret = parser.getBooleanValue();
+            booleanValues.put(field, ret);
+            return ret;
         } finally {
             parser.close();
         }
@@ -314,5 +330,31 @@ public class JsonDocument
         final JsonDocument other = (JsonDocument) o;
 
         return buf.equals(other.buf);
+    }
+
+    protected static class KeywordInfo
+    {
+        private Long offset;
+        private NodeType type;
+
+        public Long getOffset()
+        {
+            return offset;
+        }
+
+        public void setOffset(final Long offset)
+        {
+            this.offset = offset;
+        }
+
+        public NodeType getType()
+        {
+            return type;
+        }
+
+        public void setType(final NodeType type)
+        {
+            this.type = type;
+        }
     }
 }
