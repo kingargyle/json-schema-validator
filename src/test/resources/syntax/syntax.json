@@ -644,10 +644,7 @@
         {
             "schema": {
                 "properties": {
-                    "p1": {},
-                    "p2": {
-                        "required": true
-                    }
+                    "p1": {}
                 }
             },
             "valid": true
@@ -659,21 +656,6 @@
             "valid": false,
             "messages": [
                 "# [schema:properties]: field has wrong type null, expected one of [object]"
-            ]
-        },
-        {
-            "schema": {
-                "properties": {
-                    "p1": 3,
-                    "p2": {
-                        "required": "yes"
-                    }
-                }
-            },
-            "valid": false,
-            "messages": [
-                "# [schema:properties]: field \"p1\": value has wrong type integer (expected a schema)",
-                "# [schema:properties]: field \"p2\": attribute \"required\" of enclosed schema has wrong type string (expected a boolean)"
             ]
         }
     ],

@@ -23,7 +23,6 @@ import org.eel.kitchen.jsonschema.main.JsonValidator;
 import org.eel.kitchen.jsonschema.main.ValidationConfig;
 import org.eel.kitchen.jsonschema.main.ValidationReport;
 import org.eel.kitchen.util.JsonLoader;
-import org.eel.kitchen.util.SchemaVersion;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -75,23 +74,5 @@ public final class SchemaSwitchTest
         assertFalse(report.isError());
 
         assertEquals(report.getMessages(), messages);
-    }
-
-    @Test
-    public void testSetDefaultSchema()
-        throws JsonValidationFailureException
-    {
-        final ValidationConfig cfg = new ValidationConfig();
-        cfg.setDefaultVersion(SchemaVersion.DRAFT_V4);
-        assertEquals(cfg.getDefaultVersion(), SchemaVersion.DRAFT_V4);
-
-        final JsonValidator validator = new JsonValidator(cfg, schema);
-        final ValidationReport report = validator.validate(good);
-
-        assertFalse(report.isSuccess());
-
-        assertEquals(report.getMessages().size(), 1);
-        assertEquals(report.getMessages().get(0), "#/p [schema:required]: "
-            + "field has wrong type boolean, expected one of [array]");
     }
 }

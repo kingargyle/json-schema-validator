@@ -158,13 +158,13 @@
         "schema": {
             "properties": {
                 "p1": {
-                    "required": true,
                     "format": "date"
                 },
                 "p2": {
                     "format": "phone"
                 }
-            }
+            },
+            "required": [ "p1" ]
         },
         "good": {
             "p1": "2010-11-15",
@@ -174,7 +174,7 @@
             "p2": null
         },
         "messages": [
-            "#: required property p1 is missing"
+            "#: required properties [p1] are missing"
         ]
     },
     "patternProperties": {

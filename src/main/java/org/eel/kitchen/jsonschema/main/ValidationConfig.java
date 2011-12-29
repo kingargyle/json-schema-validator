@@ -44,7 +44,7 @@ public final class ValidationConfig
 
     private boolean factoriesBuilt = false;
 
-    private SchemaVersion defaultVersion = SchemaVersion.DRAFT_V3;
+    private SchemaVersion defaultVersion = SchemaVersion.DRAFT_V4;
 
     private final Map<SchemaVersion, ValidatorBundle> bundles
         = new EnumMap<SchemaVersion, ValidatorBundle>(SchemaVersion.class);
