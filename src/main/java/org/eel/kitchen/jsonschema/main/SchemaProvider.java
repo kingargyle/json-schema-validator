@@ -18,7 +18,6 @@
 package org.eel.kitchen.jsonschema.main;
 
 import org.codehaus.jackson.JsonNode;
-import org.eel.kitchen.jsonschema.uri.URIHandler;
 import org.eel.kitchen.jsonschema.uri.URIHandlerFactory;
 import org.eel.kitchen.util.JsonPointer;
 import org.eel.kitchen.util.SchemaVersion;
@@ -225,6 +224,10 @@ public final class SchemaProvider
 
         final SchemaVersion ret = SchemaVersion.getVersion(schema);
 
-        return ret == null ? defaultVersion : ret;
+        if (ret != null)
+            return ret;
+
+        // FIXME: ugly :/
+        return null == version ? defaultVersion : version;
     }
 }
